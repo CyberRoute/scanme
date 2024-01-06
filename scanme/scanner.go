@@ -5,12 +5,11 @@ import (
 	"log"
 	"net"
 	//"time"
-
+	"github.com/CyberRoute/scanme/utils"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
-
 )
 
 // scanner handles scanning a single IP address.
@@ -119,8 +118,22 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 	}
 }
 
+func getFreeTCPPort() (layers.TCPPort, error) {
+	// Use the library or function that returns a free TCP port as an int.
+	tcpport, err := utils.GetFreeTCPPort()
+	if err != nil {
+		return 0, err
+	}
+	return layers.TCPPort(tcpport), nil
+}
+
 func (s *scanner) Synscan() error {
 	mac, err := s.sendARPRequest()
+	if err != nil {
+		return err
+	}
+
+	tcpport, err := getFreeTCPPort()
 	if err != nil {
 		return err
 	}
@@ -138,7 +151,7 @@ func (s *scanner) Synscan() error {
 		Protocol: layers.IPProtocolTCP,
 	}
 	tcp := layers.TCP{
-		SrcPort: 54321,
+		SrcPort: tcpport,
 		DstPort: 0, // will be incremented during the scan
 		SYN:     true,
 	}
@@ -201,7 +214,7 @@ func (s *scanner) Synscan() error {
 				continue
 			case layers.LayerTypeTCP:
 				//fmt.Println("    TCP ", tcp1.SrcPort, tcp1.DstPort)
-				if tcp.DstPort != 54321 {
+				if tcp.DstPort != tcpport {
 					continue
 				} else if tcp.SYN && tcp.ACK {
 					log.Printf("  port %v open", tcp.SrcPort)

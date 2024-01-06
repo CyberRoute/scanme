@@ -1,12 +1,18 @@
-package util
+package utils
 
 import (
-	"math/rand"
-	"time"
+	"net"
 )
 
-// generateRandomPort generates a random TCP port number.
-func generateRandomPort() uint16 {
-	rand.Seed(time.Now().UnixNano())
-	return uint16(rand.Intn(65535-1024) + 1024) // Generate a random port between 1024 and 65535
+func GetFreeTCPPort() (int, error) {
+	// Listen on port 0 to get a free port assigned by the system.
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	defer listener.Close()
+
+	// Get the actual address, including the assigned port.
+	addr := listener.Addr().(*net.TCPAddr)
+	return addr.Port, nil
 }
