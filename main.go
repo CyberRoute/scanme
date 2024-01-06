@@ -4,9 +4,9 @@ import (
 	"flag"
 	"log"
 	"net"
-	"github.com/CyberRoute/scanme"
 	"github.com/google/gopacket/examples/util"
 	"github.com/google/gopacket/routing"
+	"github.com/CyberRoute/scanme/scanme"
 )
 
 func main() {
@@ -24,14 +24,14 @@ func main() {
 			log.Printf("non-ipv4 target: %q", arg)
 			continue
 		}
-		s, err := scanme.newScanner(ip, router)
+		s, err := scanme.NewScanner(ip, router)
 		if err != nil {
 			log.Printf("unable to create scanner for %v: %v", ip, err)
 			continue
 		}
-		if err := s.synscan(); err != nil {
+		if err := s.Synscan(); err != nil {
 			log.Printf("unable to scan %v: %v", ip, err)
 		}
-		s.close()
+		s.Close()
 	}
 }

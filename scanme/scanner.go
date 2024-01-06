@@ -9,6 +9,8 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/google/gopacket/routing"
+
 )
 
 // scanner handles scanning a single IP address.
@@ -28,7 +30,7 @@ type scanner struct {
 
 // newScanner creates a new scanner for a given destination IP address, using
 // router to determine how to route packets to that IP.
-func newScanner(ip net.IP, router routing.Router) (*scanner, error) {
+func NewScanner(ip net.IP, router routing.Router) (*scanner, error) {
 	s := &scanner{
 		dst: ip,
 		opts: gopacket.SerializeOptions{
@@ -52,7 +54,7 @@ func newScanner(ip net.IP, router routing.Router) (*scanner, error) {
 }
 
 // Closes the pcap handle
-func (s *scanner) close() {
+func (s *scanner) Close() {
 	if s.handle != nil {
 		s.handle.Close()
 	}
@@ -80,7 +82,7 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
 		DstProtAddress:    []byte(arpDst),
 	}
-	bpf := fmt.Sprintf("arp")
+	bpf := "arp"
 	if err := s.handle.SetBPFFilter(bpf); err != nil {
 		log.Fatalln(err)
 	}
@@ -117,7 +119,7 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 	}
 }
 
-func (s *scanner) synscan() error {
+func (s *scanner) Synscan() error {
 	mac, err := s.sendARPRequest()
 	if err != nil {
 		return err

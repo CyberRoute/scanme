@@ -1,4 +1,4 @@
-package scanme
+package util
 
 import (
 	"math/rand"
