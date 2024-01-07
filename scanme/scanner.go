@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	//"time"
 	"github.com/CyberRoute/scanme/utils"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -39,13 +38,22 @@ func NewScanner(ip net.IP, router routing.Router) (*scanner, error) {
 		buf: gopacket.NewSerializeBuffer(),
 	}
 
-	iface, gw, src, _ := router.Route(ip)
+	iface, gw, src, err := router.Route(ip)
+	if err != nil {
+		return nil, err
+	}
+
 	log.Printf("scanning ip %v with interface %v, gateway %v, src %v", ip, iface.Name, gw, src)
 	s.gw, s.src, s.iface = gw, src, iface
 
 	handle, err := pcap.OpenLive(iface.Name, 65536, true, pcap.BlockForever)
 	if err != nil {
 		return nil, fmt.Errorf("error opening pcap handle: %v", err)
+	}
+	bpfFilter := "arp or tcp"
+	err = handle.SetBPFFilter(bpfFilter)
+	if err != nil {
+		return nil, err
 	}
 	s.handle = handle
 
@@ -81,17 +89,15 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
 		DstProtAddress:    []byte(arpDst),
 	}
-	bpf := "arp"
-	if err := s.handle.SetBPFFilter(bpf); err != nil {
-		log.Fatalln(err)
-	}
+	
+	buf := gopacket.NewSerializeBuffer()
 	// Send a single ARP request packet (we never retry a send, since this
 	// SerializeLayers clears the given write buffer, then writes all layers
 	// into it so they correctly wrap each other. Note that by clearing the buffer,
 	// it invalidates all slices previously returned by w.Bytes()
-	gopacket.SerializeLayers(s.buf, s.opts, &eth, &arp)
+	gopacket.SerializeLayers(buf, s.opts, &eth, &arp)
 
-	s.handle.WritePacketData(s.buf.Bytes()) // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle
+	s.handle.WritePacketData(buf.Bytes()) // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle
 
 	for {
 		data, _, err := s.handle.ReadPacketData()
@@ -160,11 +166,6 @@ func (s *scanner) Synscan() error {
 	//start := time.Now()
 
 	ipFlow := gopacket.NewFlow(layers.EndpointIPv4, s.dst, s.src)
-	bpf := fmt.Sprintf("tcp dst port %d", tcp.SrcPort)
-
-	if err := s.handle.SetBPFFilter(bpf); err != nil {
-		log.Fatalln(err)
-	}
 
 
 	for {
@@ -175,12 +176,13 @@ func (s *scanner) Synscan() error {
 			tcp.DstPort++
 			gopacket.SerializeLayers(s.buf, s.opts, &eth, &ip4, &tcp)
 			s.handle.WritePacketData(s.buf.Bytes())
-		}
+		} else if tcp.DstPort == 65535 {
+					log.Printf("last port scanned for %v dst port %s assuming we've seen all we can", s.dst, tcp.DstPort)
+					return nil
+				}
+			
 		
-		// Time out 5 seconds after the last packet we sent.
-		// if time.Since(start) > time.Second*5 {
-		// 	log.Printf("timed out for %v, assuming we've seen all we can", s.dst)
-		// }
+		
 		eth := &layers.Ethernet{}
 		ip4 := &layers.IPv4{}
 		tcp := &layers.TCP{}
@@ -191,13 +193,14 @@ func (s *scanner) Synscan() error {
 		data, _, err := s.handle.ReadPacketData()
 		if err == pcap.NextErrorTimeoutExpired {
 			continue
-		} else if err != nil {
+		} else if err != nil { 
 			log.Printf("error reading packet: %v", err)
 			continue
 		}
 		// Parse the packet. Using DecodingLayerParser to be really fast
 		if err := parser.DecodeLayers(data, &decodedLayers); err != nil {
-			fmt.Println("Error", err)
+			//fmt.Println("Error", err)
+			continue
 		}
 		for _, typ := range decodedLayers {
 			switch typ {
@@ -211,17 +214,20 @@ func (s *scanner) Synscan() error {
 				if ip4.NetworkFlow() != ipFlow {
 					continue
 				}
+			case layers.LayerTypeTLS:
 				continue
 			case layers.LayerTypeTCP:
 				//fmt.Println("    TCP ", tcp1.SrcPort, tcp1.DstPort)
 				if tcp.DstPort != tcpport {
 					continue
-				} else if tcp.SYN && tcp.ACK {
-					log.Printf("  port %v open", tcp.SrcPort)
-					continue
+				
 				} else if tcp.RST {
 					log.Printf("  port %v closed", tcp.SrcPort)
 					continue
+				} else if tcp.SYN && tcp.ACK  {
+					log.Printf("  port %v open", tcp.SrcPort)
+					continue
+				} else {
 				}
 			}
 		}
