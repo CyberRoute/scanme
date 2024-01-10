@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+
 	"github.com/CyberRoute/scanme/utils"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -119,7 +120,7 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &arp)
 		decoded := []gopacket.LayerType{}
 		if err := parser.DecodeLayers(data, &decoded); err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 			//return net.HardwareAddr{}, err
 		}
 
@@ -141,6 +142,38 @@ func getFreeTCPPort() (layers.TCPPort, error) {
 		return 0, err
 	}
 	return layers.TCPPort(tcpport), nil
+}
+
+func (s *scanner) sendICMPEchoRequest() error {
+	mac, err := s.sendARPRequest()
+	if err != nil {
+		return err
+	}
+	eth := layers.Ethernet{
+		SrcMAC:      s.iface.HardwareAddr, // Replace with your source MAC address
+		DstMAC:      mac, // Broadcast MAC for ICMP
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+
+	// Prepare IP layer
+	ip4 := layers.IPv4{
+		SrcIP:    s.src,
+		DstIP:    s.dst,
+		Version:  4,
+		TTL:      64,
+		Protocol: layers.IPProtocolICMPv4,
+	}
+
+	// Prepare ICMP layer for Echo Request
+	icmp := layers.ICMPv4{
+		TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0),
+		Id:       1, // You can set any ID
+		Seq:      1, // You can set any sequence number
+	}
+	if err := s.send(&eth, &ip4, &icmp); err != nil {
+		log.Printf("error %v sending ping", err)
+	}
+	return nil
 }
 
 func (s *scanner) Synscan() error {
@@ -183,6 +216,8 @@ func (s *scanner) Synscan() error {
 	}
 	defer handle.Close()
 
+	s.sendICMPEchoRequest()
+
     
 	for {
 		// Send one packet per loop iteration until we've sent packets
@@ -203,8 +238,9 @@ func (s *scanner) Synscan() error {
 		eth := &layers.Ethernet{}
 		ip4 := &layers.IPv4{}
 		tcp := &layers.TCP{}
+		icmp := &layers.ICMPv4{}
 
-		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, eth, ip4, tcp)
+		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, eth, ip4, tcp, icmp)
 		decodedLayers := make([]gopacket.LayerType, 0, 4)
 
 		// Read in the next packet.
@@ -217,7 +253,7 @@ func (s *scanner) Synscan() error {
 		}
 		// Parse the packet. Using DecodingLayerParser to be really fast
 		if err := parser.DecodeLayers(data, &decodedLayers); err != nil {
-			fmt.Println("Error", err)
+			//fmt.Println("Error", err)
 			continue
 		}
 		for _, typ := range decodedLayers {
@@ -242,6 +278,16 @@ func (s *scanner) Synscan() error {
 				} else if tcp.SYN && tcp.ACK  {
 					log.Printf("  port %v open", tcp.SrcPort)
 					continue
+				}
+			case layers.LayerTypeICMPv4:
+	
+				switch icmp.TypeCode.Type() {
+				case layers.ICMPv4TypeEchoReply:
+					log.Printf("ICMP Echo Reply received from %v", ip4.SrcIP)
+					// Handle ICMP Echo Reply
+				case layers.ICMPv4TypeDestinationUnreachable:
+					log.Printf(" port %v filtered", tcp.SrcPort)
+					// Handle ICMP Destination Unreachable
 				}
 			}
 		}
