@@ -2,48 +2,56 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/CyberRoute/scanme/scanme"
-	"github.com/google/gopacket/examples/util"
 	"github.com/google/gopacket/routing"
 )
 
+var (
+	targetIP    = flag.String("ip", "127.0.0.1", "IP address to bind the web UI server to.")
+)
+
 func main() {
-	defer util.Run()()
 
-	startTime := time.Now() // Record the start time
-
-	router, err := routing.New()
-	if err != nil {
-		log.Fatal("routing error:", err)
+	flag.Parse()
+	if *targetIP == "" {
+		fmt.Println("No domain specified.")
+		flag.Usage()
+		os.Exit(1)
 	}
+	targetIP := *targetIP	
 
-	for _, arg := range flag.Args() {
-		var ip net.IP
-		if ip = net.ParseIP(arg); ip == nil {
-			log.Printf("non-ip target: %q", arg)
-			continue
-		} else if ip = ip.To4(); ip == nil {
-			log.Printf("non-ipv4 target: %q", arg)
-			continue
-		}
+    ip := net.ParseIP(targetIP)
+    if ip == nil {
+        log.Fatalf("Invalid IP address: %q", targetIP)
+    } else if ip = ip.To4(); ip == nil {
+        log.Fatalf("Non-IPv4 address provided: %q", targetIP)
+    }
 
-		s, err := scanme.NewScanner(ip, router)
-		if err != nil {
-			log.Printf("unable to create scanner for %v: %v", ip, err)
-			continue
-		}
+    startTime := time.Now() // Record the start time
 
-		if err := s.Synscan(); err != nil {
-			log.Printf("unable to scan %v: %v", ip, err)
-		}
+    router, err := routing.New()
+    if err != nil {
+        log.Fatal("Routing error:", err)
+    }
 
-		s.Close()
-	}
+    s, err := scanme.NewScanner(ip, router)
+    if err != nil {
+        log.Fatalf("Unable to create scanner for %v: %v", ip, err)
+    }
 
-	elapsedTime := time.Since(startTime)
-	log.Printf("Execution time: %s", elapsedTime)
+    if err := s.Synscan(); err != nil {
+        log.Fatalf("Unable to scan %v: %v", ip, err)
+    }
+
+
+    defer s.Close()
+
+    elapsedTime := time.Since(startTime)
+    log.Printf("Execution time: %s", elapsedTime)
 }
