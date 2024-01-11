@@ -288,11 +288,11 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 					continue
 				
 				} else if tcp.RST {
-					log.Printf("  port %v closed", tcp.SrcPort)
+					//log.Printf("  port %v closed", tcp.SrcPort)
 					continue
 				} else if tcp.SYN && tcp.ACK  {
 					openPorts[(tcp.SrcPort)] = "open"
-					log.Printf("  port %v open", tcp.SrcPort)
+					//log.Printf("  port %v open", tcp.SrcPort)
 					continue
 				}
 			case layers.LayerTypeICMPv4:

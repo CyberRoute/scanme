@@ -40,19 +40,22 @@ func main() {
         log.Fatal("Routing error:", err)
     }
 
-    s, err := scanme.NewScanner(ip, router)
+    scanner, err := scanme.NewScanner(ip, router)
     if err != nil {
         log.Fatalf("Unable to create scanner for %v: %v", ip, err)
     }
 
-    openPorts, err := s.Synscan()
+    openPorts, err := scanner.Synscan()
     if err != nil {
         log.Fatalf("Unable to scan %v: %v", ip, err)
 
     }
-    fmt.Println(openPorts)
+    // Process open ports
+	for port, service := range openPorts {
+		log.Printf("Port %v is %v", port, service)
+	}
 
-    defer s.Close()
+    defer scanner.Close()
 
     elapsedTime := time.Since(startTime)
     log.Printf("Execution time: %s", elapsedTime)
