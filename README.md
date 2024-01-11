@@ -4,7 +4,7 @@ Scanme is a Go package for network scanning using the GoPacket library. It allow
 This is not an attempt to rewrite **nmap -sS**, probably the most popular scan option, but learn more deeply about network scanning technics, parallelism
 is not yet implemented but will be coming soon. Despite scanning the 65k tcp ports serially it is pretty fast if compared with:
 
-```
+```bash
 sudo nmap -vvv -sS -p 1-65535 <ip-tagert>
 ```
 
@@ -20,13 +20,13 @@ sudo nmap -vvv -sS -p 1-65535 <ip-tagert>
 
 ## Installation
 
-```
+```bash
 go get -u github.com/CyberRoute/scanme
 ```
 
 ## Usage
 
-```
+```go
 package main
 
 import (
@@ -65,7 +65,7 @@ func main() {
 ```
 
 ## Sample scan
-```
+```bash
 alessandro@xps:~/Development/scanme$ sudo go run main.go -ip 172.16.168.131
 [sudo] password for alessandro: 
 2024/01/11 15:04:53 scanning ip 172.16.168.131 with interface vmnet8, gateway <nil>, src 172.16.168.1
