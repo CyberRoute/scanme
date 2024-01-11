@@ -65,7 +65,7 @@ func main() {
 ```
 
 ## Sample scan
-```bash
+```
 alessandro@xps:~/Development/scanme$ sudo go run main.go -ip 172.16.168.131
 [sudo] password for alessandro: 
 2024/01/11 15:04:53 scanning ip 172.16.168.131 with interface vmnet8, gateway <nil>, src 172.16.168.1
