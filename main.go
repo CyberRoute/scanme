@@ -45,10 +45,12 @@ func main() {
         log.Fatalf("Unable to create scanner for %v: %v", ip, err)
     }
 
-    if err := s.Synscan(); err != nil {
+    openPorts, err := s.Synscan()
+    if err != nil {
         log.Fatalf("Unable to scan %v: %v", ip, err)
-    }
 
+    }
+    fmt.Println(openPorts)
 
     defer s.Close()
 

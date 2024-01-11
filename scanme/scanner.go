@@ -80,6 +80,13 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Set a BPF filter to capture only ARP replies destined for our source IP
+	bpfFilter := fmt.Sprintf("arp and ether dst %s", s.iface.HardwareAddr)
+	if err := handle.SetBPFFilter(bpfFilter); err != nil {
+		return nil, err
+	}
+
 	defer handle.Close()
 	// Prepare the layers to send for an ARP request.
 	eth := layers.Ethernet{
@@ -103,9 +110,7 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 	// SerializeLayers clears the given write buffer, then writes all layers
 	// into it so they correctly wrap each other. Note that by clearing the buffer,
 	// it invalidates all slices previously returned by w.Bytes()
-	// gopacket.SerializeLayers(s.buf, s.opts, &eth, &arp)
 
-	// s.handle.WritePacketData(s.buf.Bytes()) // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle
     if err := s.send(&eth, &arp); err != nil {
 		return nil, err
 	}
@@ -120,8 +125,7 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &arp)
 		decoded := []gopacket.LayerType{}
 		if err := parser.DecodeLayers(data, &decoded); err != nil {
-			//fmt.Println(err)
-			//return net.HardwareAddr{}, err
+			//fmt.Println(err) Errors here are due to the decoder not all layers are implemented
 		}
 
 		for _, layerType := range decoded {
@@ -176,15 +180,17 @@ func (s *scanner) sendICMPEchoRequest() error {
 	return nil
 }
 
-func (s *scanner) Synscan() error {
+func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
+	openPorts := make(map[layers.TCPPort]string)
+
 	mac, err := s.sendARPRequest()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tcpport, err := getFreeTCPPort()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	eth := layers.Ethernet{
@@ -206,33 +212,42 @@ func (s *scanner) Synscan() error {
 	}
 
 	tcp.SetNetworkLayerForChecksum(&ip4)
-	//start := time.Now()
 
 	ipFlow := gopacket.NewFlow(layers.EndpointIPv4, s.dst, s.src)
 
 	handle, err := pcap.OpenLive(s.iface.Name, 65535, true, pcap.BlockForever)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	// tcp[13] & 0x02 != 0 checks for SYN flag.
+    // tcp[13] & 0x10 != 0 checks for ACK flag.
+    // tcp[13] & 0x04 != 0 checks for RST flag.
+	// this rule should decrease the number of packets captured, still experimenting with this :D
+	bpfFilter := "icmp or (tcp and (tcp[13] & 0x02 != 0 or tcp[13] & 0x10 != 0 or tcp[13] & 0x04 != 0))"
+
+	err = handle.SetBPFFilter(bpfFilter)
+	if err != nil {
+		return nil, err
+	}
+
 	defer handle.Close()
+
+	
 
 	s.sendICMPEchoRequest()
 
-    
 	for {
 		// Send one packet per loop iteration until we've sent packets
 		// to all of ports [1, 65535].
 
 		if tcp.DstPort < 65535 {
 			tcp.DstPort++
-			//gopacket.SerializeLayers(s.buf, s.opts, &eth, &ip4, &tcp)
-			//s.handle.WritePacketData(s.buf.Bytes())
 			if err := s.send(&eth, &ip4, &tcp); err != nil {
 				log.Printf("error sending to port %v: %v", tcp.DstPort, err)
 			}
 		} else if tcp.DstPort == 65535 {
 					log.Printf("last port scanned for %v dst port %s assuming we've seen all we can", s.dst, tcp.DstPort)
-					return nil
+					return openPorts, nil
 				}
 			
 		eth := &layers.Ethernet{}
@@ -263,12 +278,12 @@ func (s *scanner) Synscan() error {
 			 	//fmt.Println("    Eth ", eth.SrcMAC, eth.DstMAC)
 			 	continue
 			case layers.LayerTypeIPv4:
-				//fmt.Println("    IP4 ", ip41.SrcIP, ip41.DstIP)
+				//fmt.Println("    IP4 ", ip4.SrcIP, ip4.DstIP)
 				if ip4.NetworkFlow() != ipFlow {
 					continue
 				}
 			case layers.LayerTypeTCP:
-				//fmt.Println("    TCP ", tcp1.SrcPort, tcp1.DstPort)
+				//fmt.Println("    TCP ", tcp.SrcPort, tcp.DstPort)
 				if tcp.DstPort != tcpport {
 					continue
 				
@@ -276,6 +291,7 @@ func (s *scanner) Synscan() error {
 					log.Printf("  port %v closed", tcp.SrcPort)
 					continue
 				} else if tcp.SYN && tcp.ACK  {
+					openPorts[(tcp.SrcPort)] = "open"
 					log.Printf("  port %v open", tcp.SrcPort)
 					continue
 				}
