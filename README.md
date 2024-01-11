@@ -1,6 +1,12 @@
 ## Scanme
 
 Scanme is a Go package for network scanning using the GoPacket library. It allows scanning a single IP address for open ports using SYN scans.
+This is not an attempt to rewrite **nmap -sS**, probably the most popular scan option, but learn more deeply about network scanning technics, parallelism
+is not yet implemented but will be coming soon. Despite scanning the 65k tcp ports serially it is pretty fast if compared with:
+
+```
+sudo nmap -vvv -sS -p 1-65535 <ip-tagert>
+```
 
 ## Features
 
@@ -63,5 +69,6 @@ Contributions are welcome! If you find any issues or have suggestions for improv
 
 ## Acknowledgments
 Inspired by and wanting to improve this https://github.com/google/gopacket/blob/master/examples/synscan/main.go
+Technical details checked here https://nmap.org/book/synscan.html and obviously https://github.com/nmap/nmap
 
 
