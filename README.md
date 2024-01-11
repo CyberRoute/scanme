@@ -64,6 +64,25 @@ func main() {
 }
 ```
 
+## Sample scan
+```
+alessandro@xps:~/Development/scanme$ sudo go run main.go -ip 172.16.168.131
+[sudo] password for alessandro: 
+2024/01/11 15:04:53 scanning ip 172.16.168.131 with interface vmnet8, gateway <nil>, src 172.16.168.1
+2024/01/11 15:04:53 ICMP Echo Reply received from 172.16.168.131
+2024/01/11 15:04:54 last port scanned for 172.16.168.131 dst port 65535 assuming we've seen all we can
+2024/01/11 15:04:54 Port 445(microsoft-ds) is open
+2024/01/11 15:04:54 Port 139(netbios-ssn) is open
+2024/01/11 15:04:54 Port 143(imap) is open
+2024/01/11 15:04:54 Port 443(https) is open
+2024/01/11 15:04:54 Port 5001(commplex-link) is open
+2024/01/11 15:04:54 Port 8080(http-alt) is open
+2024/01/11 15:04:54 Port 8081(sunproxyadmin) is open
+2024/01/11 15:04:54 Port 22(ssh) is open
+2024/01/11 15:04:54 Port 80(http) is open
+2024/01/11 15:04:54 Execution time: 963.973315ms
+```
+
 ## Contribute
 Contributions are welcome! If you find any issues or have suggestions for improvement, please create an issue or pull request.
 
