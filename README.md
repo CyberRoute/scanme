@@ -1,8 +1,8 @@
-# Scanme
+## Scanme
 
 Scanme is a Go package for network scanning using the GoPacket library. It allows scanning a single IP address for open ports using SYN scans.
 
-# Features
+## Features
 
 - **SYN Scan:** Perform SYN scans to identify open ports on a target host.
 - **ICMP Echo Request:** Send ICMP Echo Requests to discover live hosts on the network.
@@ -12,13 +12,13 @@ Scanme is a Go package for network scanning using the GoPacket library. It allow
     <img src="/img/scanme.png" width="800px"</img> 
 </div>
 
-# Installation
+## Installation
 
 ```
 go get -u github.com/CyberRoute/scanme
 ```
 
-# Usage
+## Usage
 
 ```
 package main
@@ -58,10 +58,10 @@ func main() {
 }
 ```
 
-# Contribute
+## Contribute
 Contributions are welcome! If you find any issues or have suggestions for improvement, please create an issue or pull request.
 
-# Acknowledgments
+## Acknowledgments
 Inspired by and wanting to improve this https://github.com/google/gopacket/blob/master/examples/synscan/main.go
 
 
