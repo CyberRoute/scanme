@@ -86,6 +86,9 @@ alessandro@xps:~/Development/scanme$ sudo go run main.go -ip 172.16.168.131
 ## Contribute
 Contributions are welcome! If you find any issues or have suggestions for improvement, please create an issue or pull request.
 
+## License
+Bruter is developed by Alessandro Bresciani with some help from various projects and released with GPL license.
+
 ## Acknowledgments
 Inspired by and wanting to improve this https://github.com/google/gopacket/blob/master/examples/synscan/main.go
 Technical details checked here https://nmap.org/book/synscan.html and obviously https://github.com/nmap/nmap
