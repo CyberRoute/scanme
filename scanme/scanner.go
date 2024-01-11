@@ -105,13 +105,13 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
 		DstProtAddress:    []byte(arpDst),
 	}
-	
+
 	// Send a single ARP request packet (we never retry a send, since this
 	// SerializeLayers clears the given write buffer, then writes all layers
 	// into it so they correctly wrap each other. Note that by clearing the buffer,
 	// it invalidates all slices previously returned by w.Bytes()
 
-    if err := s.send(&eth, &arp); err != nil {
+	if err := s.send(&eth, &arp); err != nil {
 		return nil, err
 	}
 	for {
@@ -154,8 +154,8 @@ func (s *scanner) sendICMPEchoRequest() error {
 		return err
 	}
 	eth := layers.Ethernet{
-		SrcMAC:      s.iface.HardwareAddr, // Replace with your source MAC address
-		DstMAC:      mac, // Broadcast MAC for ICMP
+		SrcMAC:       s.iface.HardwareAddr, // Replace with your source MAC address
+		DstMAC:       mac,                  // Broadcast MAC for ICMP
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 
@@ -220,8 +220,8 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 		return nil, err
 	}
 	// tcp[13] & 0x02 != 0 checks for SYN flag.
-    // tcp[13] & 0x10 != 0 checks for ACK flag.
-    // tcp[13] & 0x04 != 0 checks for RST flag.
+	// tcp[13] & 0x10 != 0 checks for ACK flag.
+	// tcp[13] & 0x04 != 0 checks for RST flag.
 	// this rule should decrease the number of packets captured, still experimenting with this :D
 	bpfFilter := "icmp or (tcp and (tcp[13] & 0x02 != 0 or tcp[13] & 0x10 != 0 or tcp[13] & 0x04 != 0))"
 
@@ -231,8 +231,6 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 	}
 
 	defer handle.Close()
-
-	
 
 	s.sendICMPEchoRequest()
 
@@ -246,10 +244,10 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 				log.Printf("error sending to port %v: %v", tcp.DstPort, err)
 			}
 		} else if tcp.DstPort == 65535 {
-					log.Printf("last port scanned for %v dst port %s assuming we've seen all we can", s.dst, tcp.DstPort)
-					return openPorts, nil
-				}
-			
+			log.Printf("last port scanned for %v dst port %s assuming we've seen all we can", s.dst, tcp.DstPort)
+			return openPorts, nil
+		}
+
 		eth := &layers.Ethernet{}
 		ip4 := &layers.IPv4{}
 		tcp := &layers.TCP{}
@@ -262,7 +260,7 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 		data, _, err := handle.ReadPacketData()
 		if err == pcap.NextErrorTimeoutExpired {
 			continue
-		} else if err != nil { 
+		} else if err != nil {
 			log.Printf("error reading packet: %v", err)
 			continue
 		}
@@ -275,8 +273,8 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 			switch typ {
 
 			case layers.LayerTypeEthernet:
-			 	//fmt.Println("    Eth ", eth.SrcMAC, eth.DstMAC)
-			 	continue
+				//fmt.Println("    Eth ", eth.SrcMAC, eth.DstMAC)
+				continue
 			case layers.LayerTypeIPv4:
 				//fmt.Println("    IP4 ", ip4.SrcIP, ip4.DstIP)
 				if ip4.NetworkFlow() != ipFlow {
@@ -286,17 +284,17 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 				//fmt.Println("    TCP ", tcp.SrcPort, tcp.DstPort)
 				if tcp.DstPort != tcpport {
 					continue
-				
+
 				} else if tcp.RST {
 					//log.Printf("  port %v closed", tcp.SrcPort)
 					continue
-				} else if tcp.SYN && tcp.ACK  {
+				} else if tcp.SYN && tcp.ACK {
 					openPorts[(tcp.SrcPort)] = "open"
 					//log.Printf("  port %v open", tcp.SrcPort)
 					continue
 				}
 			case layers.LayerTypeICMPv4:
-	
+
 				switch icmp.TypeCode.Type() {
 				case layers.ICMPv4TypeEchoReply:
 					log.Printf("ICMP Echo Reply received from %v", ip4.SrcIP)
