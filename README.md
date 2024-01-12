@@ -1,6 +1,8 @@
-[![golangci-lint](https://github.com/CyberRoute/scanme/actions/workflows/golangci-lint.yml/badge.svg?branch=main)](https://github.com/CyberRoute/scanme/actions/workflows/golangci-lint.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/CyberRoute/scanme)](https://goreportcard.com/report/github.com/CyberRoute/scanme)
-
+<p align="center">
+  <a href="https://github.com/CyberRoute/scanme/actions/workflows/golangci-lint.yml/badge.svg?branch=main"><img alt="Go Lint" src="https://github.com/CyberRoute/scanme/actions/workflows/golangci-lint.yml"></a>
+  <a href="https://goreportcard.com/badge/github.com/CyberRoute/scanme"><img alt="Go Report Card" src="https://goreportcard.com/report/github.com/CyberRoute/scanme"></a>
+  <a href="https://github.com/CyberRoute/scanme/blob/main/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-GPL3-brightgreen.svg?style=flat-square"></a>
+</p>
 
 ## Scanme
 
