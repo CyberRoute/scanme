@@ -211,7 +211,10 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 		SYN:     true,
 	}
 
-	tcp.SetNetworkLayerForChecksum(&ip4)
+	err = tcp.SetNetworkLayerForChecksum(&ip4)
+	if err != nil {
+		return nil, err
+	}
 
 	ipFlow := gopacket.NewFlow(layers.EndpointIPv4, s.dst, s.src)
 
@@ -232,7 +235,10 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 
 	defer handle.Close()
 
-	s.sendICMPEchoRequest()
+	err = s.sendICMPEchoRequest()
+	if err != nil {
+		return nil, err
+	}
 
 	for {
 		// Send one packet per loop iteration until we've sent packets
