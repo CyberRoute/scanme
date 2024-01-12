@@ -125,7 +125,7 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &arp)
 		decoded := []gopacket.LayerType{}
 		if err := parser.DecodeLayers(data, &decoded); err != nil {
-			// nolint:staticcheck
+			// nolint:staticcheck // SA9003 ignore this!
 			// This branch is intentionally left empty (SA9003).
 			// Errors here are due to the decoder, and not all layers are implemented.
 			// Uncomment the next line to print the error if needed.
