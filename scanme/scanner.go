@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/CyberRoute/scanme/utils"
 	"github.com/google/gopacket"
@@ -244,6 +245,8 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 		return nil, err
 	}
 
+	start := time.Now()
+
 	for {
 		// Send one packet per loop iteration until we've sent packets
 		// to all of ports [1, 65535].
@@ -254,8 +257,12 @@ func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
 				log.Printf("error sending to port %v: %v", tcp.DstPort, err)
 			}
 		} else if tcp.DstPort == 65535 {
-			log.Printf("last port scanned for %v dst port %s assuming we've seen all we can", s.dst, tcp.DstPort)
+			log.Printf("last port scanned for %v dst port %s", s.dst, tcp.DstPort)
 			return openPorts, nil
+		}
+		if time.Since(start) > time.Second*5 {
+			log.Printf("timed out for %v aborting scan", s.dst)
+			return nil, nil
 		}
 
 		eth := &layers.Ethernet{}
