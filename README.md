@@ -1,3 +1,7 @@
+[![golangci-lint](https://github.com/CyberRoute/scanme/actions/workflows/golangci-lint.yml/badge.svg?branch=main)](https://github.com/CyberRoute/scanme/actions/workflows/golangci-lint.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/CyberRoute/scanme)](https://goreportcard.com/report/github.com/CyberRoute/scanme)
+
+
 ## Scanme
 
 Scanme is a Go package for network scanning using the GoPacket library. It allows scanning a single IP address for open ports using SYN scans.
