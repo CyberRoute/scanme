@@ -125,7 +125,7 @@ func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
 		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &arp)
 		decoded := []gopacket.LayerType{}
 		if err := parser.DecodeLayers(data, &decoded); err != nil {
-			//fmt.Println(err) Errors here are due to the decoder not all layers are implemented
+			//nolint fmt.Println(err) Errors here are due to the decoder not all layers are implemented
 		}
 
 		for _, layerType := range decoded {
