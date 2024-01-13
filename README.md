@@ -4,7 +4,7 @@
   <a href="https://github.com/CyberRoute/scanme/blob/main/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-GPL3-brightgreen.svg?style=flat"></a>
 </p>
 
-## Scanme :hourglass_flowing_sand:
+## Scanme :eye:
 
 Scanme is a Go package for network scanning using the GoPacket library. It allows scanning a single IP address for open ports using SYN scans.
 This is not an attempt to rewrite **nmap -sS**, probably the most popular scan option, but learn more deeply about network scanning technics, parallelism
