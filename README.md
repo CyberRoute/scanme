@@ -55,7 +55,7 @@ func main() {
 
 	flag.Parse()
 	if *targetIP == "" {
-		fmt.Println("No domain specified.")
+		fmt.Println("No ip specified.")
 		flag.Usage()
 		os.Exit(1)
 	}
