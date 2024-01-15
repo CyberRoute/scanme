@@ -13,8 +13,8 @@ import (
 	"github.com/google/gopacket/routing"
 )
 
-// scanner handles scanning a single IP address.
-type scanner struct {
+// The type scanner handles scanning a single IP address and is only shared with the packet injector
+type Scanner struct {
 	// iface is the interface to send packets on.
 	iface *net.Interface
 	// destination, gateway (if applicable), and source IP addresses to use.
@@ -30,8 +30,8 @@ type scanner struct {
 
 // newScanner creates a new scanner for a given destination IP address, using
 // router to determine how to route packets to that IP.
-func NewScanner(ip net.IP, router routing.Router) (*scanner, error) {
-	s := &scanner{
+func NewScanner(ip net.IP, router routing.Router) (*Scanner, error) {
+	s := &Scanner{
 		dst: ip,
 		opts: gopacket.SerializeOptions{
 			FixLengths:       true,
@@ -58,21 +58,21 @@ func NewScanner(ip net.IP, router routing.Router) (*scanner, error) {
 }
 
 // Closes the pcap handle
-func (s *scanner) Close() {
+func (s *Scanner) Close() {
 	if s.handle != nil {
 		s.handle.Close()
 	}
 }
 
 // send sends the given layers as a single packet on the network.
-func (s *scanner) send(l ...gopacket.SerializableLayer) error {
+func (s *Scanner) send(l ...gopacket.SerializableLayer) error {
 	if err := gopacket.SerializeLayers(s.buf, s.opts, l...); err != nil {
 		return err
 	}
 	return s.handle.WritePacketData(s.buf.Bytes())
 }
 
-func (s *scanner) sendARPRequest() (net.HardwareAddr, error) {
+func (s *Scanner) sendARPRequest() (net.HardwareAddr, error) {
 	arpDst := s.dst
 	if s.gw != nil {
 		arpDst = s.gw
@@ -153,7 +153,7 @@ func getFreeTCPPort() (layers.TCPPort, error) {
 	return layers.TCPPort(tcpport), nil
 }
 
-func (s *scanner) sendICMPEchoRequest() error {
+func (s *Scanner) sendICMPEchoRequest() error {
 	mac, err := s.sendARPRequest()
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func (s *scanner) sendICMPEchoRequest() error {
 	return nil
 }
 
-func (s *scanner) Synscan() (map[layers.TCPPort]string, error) {
+func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 	openPorts := make(map[layers.TCPPort]string)
 
 	mac, err := s.sendARPRequest()
