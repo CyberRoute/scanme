@@ -2,6 +2,7 @@
   <a href="https://github.com/CyberRoute/scanme/actions/workflows/golangci-lint.yml/badge.svg?branch=main"><img alt="golangci-lint" src="https://img.shields.io/badge/golangci-lint-brightgreen.svg?style=flat"></a>
   <a href="https://goreportcard.com/badge/github.com/CyberRoute/scanme"><img alt="Go Report" src="https://img.shields.io/badge/go%20report-A+-brightgreen.svg?style=flat"></a>
   <a href="https://github.com/CyberRoute/scanme/blob/main/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-GPL3-brightgreen.svg?style=flat"></a>
+  <a href="http://godoc.org/github.com/CyberRoute/scanme"> <img alt="Docs" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square"></a>
 </p>
 
 ## Scanme :eye:
