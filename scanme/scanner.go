@@ -183,6 +183,10 @@ func (s *Scanner) sendICMPEchoRequest() error {
 	return nil
 }
 
+// Synscan performs a SYN port scan on the specified destination IP address using the provided network interface.
+// It sends SYN packets to ports [1, 65535] and records open ports in a map. The function employs ARP requests,
+// ICMP Echo Requests, and packet capturing to identify open, closed, or filtered ports.
+// The function returns a map of open ports along with their status or an error if any occurs during the scan.
 func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 	openPorts := make(map[layers.TCPPort]string)
 
