@@ -14,16 +14,15 @@ import (
 )
 
 // The type scanner handles scanning a single IP address and is only shared with the packet injector
+// iface is the interface to send packets on.
+// destination, gateway (if applicable), and source IP addresses to use.
+// opts and buf allow us to easily serialize packets in the send()
+// method.
+
 type Scanner struct {
-	// iface is the interface to send packets on.
 	iface *net.Interface
-	// destination, gateway (if applicable), and source IP addresses to use.
 	dst, gw, src net.IP
-
 	handle *pcap.Handle
-
-	// opts and buf allow us to easily serialize packets in the send()
-	// method.
 	opts gopacket.SerializeOptions
 	buf  gopacket.SerializeBuffer
 }
