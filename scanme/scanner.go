@@ -18,7 +18,6 @@ import (
 // destination, gateway (if applicable), and source IP addresses to use.
 // opts and buf allow us to easily serialize packets in the send()
 // method.
-
 type Scanner struct {
 	iface *net.Interface
 	dst, gw, src net.IP
