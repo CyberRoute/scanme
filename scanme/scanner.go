@@ -128,7 +128,7 @@ func (s *Scanner) sendARPRequest() (net.HardwareAddr, error) {
 			// This branch is intentionally left empty (SA9003).
 			// Errors here are due to the decoder, and not all layers are implemented.
 			// Uncomment the next line to print the error if needed.
-			// fmt.Println(err)
+			continue
 		}
 
 		for _, layerType := range decoded {
@@ -285,31 +285,25 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 		}
 		// Parse the packet. Using DecodingLayerParser to be really fast
 		if err := parser.DecodeLayers(data, &decodedLayers); err != nil {
-			//fmt.Println("Error", err)
 			continue
 		}
 		for _, typ := range decodedLayers {
 			switch typ {
 
 			case layers.LayerTypeEthernet:
-				//fmt.Println("    Eth ", eth.SrcMAC, eth.DstMAC)
 				continue
 			case layers.LayerTypeIPv4:
-				//fmt.Println("    IP4 ", ip4.SrcIP, ip4.DstIP)
 				if ip4.NetworkFlow() != ipFlow {
 					continue
 				}
 			case layers.LayerTypeTCP:
-				//fmt.Println("    TCP ", tcp.SrcPort, tcp.DstPort)
 				if tcp.DstPort != tcpport {
 					continue
 
 				} else if tcp.RST {
-					//log.Printf("  port %v closed", tcp.SrcPort)
 					continue
 				} else if tcp.SYN && tcp.ACK {
 					openPorts[(tcp.SrcPort)] = "open"
-					//log.Printf("  port %v open", tcp.SrcPort)
 					continue
 				}
 			case layers.LayerTypeICMPv4:
@@ -317,10 +311,8 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 				switch icmp.TypeCode.Type() {
 				case layers.ICMPv4TypeEchoReply:
 					log.Printf("ICMP Echo Reply received from %v", ip4.SrcIP)
-					// Handle ICMP Echo Reply
 				case layers.ICMPv4TypeDestinationUnreachable:
 					log.Printf(" port %v filtered", tcp.SrcPort)
-					// Handle ICMP Destination Unreachable
 				}
 			}
 		}

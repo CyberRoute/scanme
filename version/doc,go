@@ -1,0 +1,2 @@
+// Package version contains the library version.
+package version
