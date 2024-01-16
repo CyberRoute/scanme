@@ -128,7 +128,6 @@ func (s *Scanner) sendARPRequest() (net.HardwareAddr, error) {
 			// This branch is intentionally left empty (SA9003).
 			// Errors here are due to the decoder, and not all layers are implemented.
 			// Uncomment the next line to print the error if needed.
-			continue
 		}
 
 		for _, layerType := range decoded {
