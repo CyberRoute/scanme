@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/CyberRoute/scanme/utils"
@@ -19,11 +21,11 @@ import (
 // opts and buf allow us to easily serialize packets in the send()
 // method.
 type Scanner struct {
-	iface *net.Interface
+	iface        *net.Interface
 	dst, gw, src net.IP
-	handle *pcap.Handle
-	opts gopacket.SerializeOptions
-	buf  gopacket.SerializeBuffer
+	handle       *pcap.Handle
+	opts         gopacket.SerializeOptions
+	buf          gopacket.SerializeBuffer
 }
 
 // newScanner creates a new scanner for a given destination IP address, using
@@ -246,7 +248,7 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 		return nil, err
 	}
 
-	start := time.Now()
+	//start := time.Now()
 
 	for {
 		// Send one packet per loop iteration until we've sent packets
@@ -261,17 +263,17 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 			log.Printf("last port scanned for %v dst port %s", s.dst, tcp.DstPort)
 			return openPorts, nil
 		}
-		if time.Since(start) > time.Second*5 {
-			log.Printf("timed out for %v aborting scan", s.dst)
-			return nil, nil
-		}
+		// if time.Since(start) > time.Second*20 {
+		// 	log.Printf("timed out for %v aborting scan", s.dst)
+		// 	return nil, nil
+		// }
 
-		eth := &layers.Ethernet{}
-		ip4 := &layers.IPv4{}
-		tcp := &layers.TCP{}
-		icmp := &layers.ICMPv4{}
+		eth := layers.Ethernet{}
+		ip4 := layers.IPv4{}
+		tcp := layers.TCP{}
+		icmp := layers.ICMPv4{}
 
-		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, eth, ip4, tcp, icmp)
+		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &tcp, &icmp)
 		decodedLayers := make([]gopacket.LayerType, 0, 4)
 
 		// Read in the next packet.
@@ -316,4 +318,49 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 			}
 		}
 	}
+}
+
+// ConnScan performs a full handshake on each TCP port.
+func (s *Scanner) ConnScan() (map[layers.TCPPort]string, error) {
+	openPorts := make(map[layers.TCPPort]string)
+	var mutex sync.Mutex
+
+	retry := 3
+
+	var wg sync.WaitGroup
+	for port := 1; port <= 65535; port++ {
+		wg.Add(1)
+		go func(p int) {
+			defer wg.Done()
+
+			// Use a loop for retries
+			for attempt := 1; attempt <= retry; attempt++ {
+				addr := fmt.Sprintf("%s:%d", s.dst.String(), p)
+				conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
+				if err == nil {
+					conn.Close()
+					serviceName, _ := utils.GetServiceName(strconv.Itoa(p), "tcp")
+
+					// Use mutex to safely update the map
+					mutex.Lock()
+					openPorts[layers.TCPPort(p)] = serviceName + " open"
+					mutex.Unlock()
+
+					break // Connection successful, exit the retry loop
+				}
+
+				// Sleep for a short duration before the next retry
+				time.Sleep(500 * time.Millisecond)
+			}
+		}(port)
+		if port == 65535 {
+			log.Printf("last port scanned for %v dst port %d", s.dst, port)
+			return openPorts, nil
+		}
+
+	}
+
+	wg.Wait()
+
+	return openPorts, nil
 }

@@ -52,7 +52,7 @@ func main() {
 	}
 	// Process open ports
 	for port, service := range openPorts {
-		log.Printf("Port %v is %v", port, service)
+		log.Printf("Port %v %v", port, service)
 	}
 
 	defer scanner.Close()

@@ -7,17 +7,19 @@
 
 ## Scanme :eye:
 
-Scanme is a Go package for network scanning using the GoPacket library. It allows scanning a single IP address for open ports using SYN scans.
-This is not an attempt to rewrite **nmap -sS**, probably the most popular scan option, but learn more deeply about network scanning technics, parallelism
+Scanme is a Go package for network scanning using the GoPacket library. It allows scanning a single IP address for open ports.
+This is not an attempt to rewrite **nmap**, probably the most popular scan, but learn more deeply about network scanning technics, parallelism
 is not yet implemented but will be coming soon. Despite scanning the 65k tcp ports serially it is pretty fast if compared with:
 
 ```bash
-sudo nmap -vvv -sS -p 1-65535 <ip-tagert>
+nmap -vvv -sS -p 1-65535 <ip-tagert>
+nmap -vvv -sT  -p 1-65535 <ip-tagert>
 ```
 
 ## Features
 
 - **SYN Scan:** Perform SYN scans to identify open ports on a target host.
+- **Connect Scan:** Perform a full TCP handshake on a target host.
 - **ICMP Echo Request:** Send ICMP Echo Requests to discover live hosts on the network.
 
 ## Example Simple scanner
@@ -26,6 +28,8 @@ sudo nmap -vvv -sS -p 1-65535 <ip-tagert>
 </div>
 
 ## Installation
+
+- On Linux, install `libpcap` 
 
 ```bash
 go get -u github.com/CyberRoute/scanme
