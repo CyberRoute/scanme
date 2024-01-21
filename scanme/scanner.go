@@ -339,7 +339,11 @@ func (s *Scanner) ConnScan() (map[layers.TCPPort]string, error) {
 				conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
 				if err == nil {
 					conn.Close()
-					serviceName, _ := utils.GetServiceName(strconv.Itoa(p), "tcp")
+					serviceName, err := utils.GetServiceName(strconv.Itoa(p), "tcp")
+					if err != nil {
+						// Log or handle the error, and continue the loop
+						log.Printf("Error getting service name for port %d: %v", p, err)
+					}
 
 					// Use mutex to safely update the map
 					mutex.Lock()
