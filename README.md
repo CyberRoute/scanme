@@ -20,7 +20,7 @@ nmap -vvv -sT  -p 1-65535 <ip-tagert>
 ## Features
 
 - **SYN Scan:** Perform SYN scans to identify open ports on a target host.
-- **Connect Scan:** Perform a full TCP handshake on a target host.
+- **Connect Scan:** Perform a full TCP handshake on a target host (supports IPv4 and IPv6).
 - **ICMP Echo Request:** Send ICMP Echo Requests to discover live hosts on the network.
 
 ## Example Simple scanner

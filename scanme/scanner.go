@@ -335,7 +335,7 @@ func (s *Scanner) ConnScan() (map[layers.TCPPort]string, error) {
 
 			// Use a loop for retries
 			for attempt := 1; attempt <= retry; attempt++ {
-				addr := fmt.Sprintf("%s:%d", s.dst.String(), p)
+				addr := fmt.Sprintf("[%s]:%d", s.dst.String(), p)
 				conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
 				if err == nil {
 					conn.Close()
