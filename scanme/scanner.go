@@ -45,6 +45,14 @@ func NewScanner(ip net.IP, router routing.Router) (*Scanner, error) {
 		return nil, err
 	}
 
+	// If scanning localhost, set the interface to loopback
+	if ip.Equal(src) {
+		iface, err = net.InterfaceByName("lo")
+		if err != nil {
+			return nil, fmt.Errorf("error getting loopback interface: %v", err)
+		}
+	}
+
 	log.Printf("scanning ip %v with interface %v, gateway %v, src %v", ip, iface.Name, gw, src)
 	s.gw, s.src, s.iface = gw, src, iface
 
@@ -124,6 +132,7 @@ func (s *Scanner) sendARPRequest() (net.HardwareAddr, error) {
 		}
 
 		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &arp)
+		parser.IgnoreUnsupported = true
 		decoded := []gopacket.LayerType{}
 		//nolint:staticcheck // SA9003 ignore this!
 		if err := parser.DecodeLayers(data, &decoded); err != nil {
@@ -191,9 +200,22 @@ func (s *Scanner) sendICMPEchoRequest() error {
 func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 	openPorts := make(map[layers.TCPPort]string)
 
-	mac, err := s.sendARPRequest()
-	if err != nil {
-		return nil, err
+	var srcMAC, dstMAC net.HardwareAddr
+
+	// Check if the destination IP is 127.0.0.1 or source and destination are the same
+	if s.dst.Equal(net.IPv4(127, 0, 0, 1)) || s.src.Equal(s.dst) {
+		// Use loopback MAC address for both source and destination
+		// srcMAC = net.HardwareAddr{0, 0, 0, 0, 0, 0}
+		// dstMAC = net.HardwareAddr{0, 0, 0, 0, 0, 0}
+		log.Fatal("You are trying to scan local address which require an open socket")
+	} else {
+		// Obtain MAC address from ARP request
+		mac, err := s.sendARPRequest()
+		if err != nil {
+			return nil, err
+		}
+		srcMAC = s.iface.HardwareAddr
+		dstMAC = mac
 	}
 
 	tcpport, err := getFreeTCPPort()
@@ -202,8 +224,8 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 	}
 
 	eth := layers.Ethernet{
-		SrcMAC:       s.iface.HardwareAddr,
-		DstMAC:       mac,
+		SrcMAC:       srcMAC,
+		DstMAC:       dstMAC,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 	ip4 := layers.IPv4{
@@ -308,7 +330,6 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 					continue
 				}
 			case layers.LayerTypeICMPv4:
-
 				switch icmp.TypeCode.Type() {
 				case layers.ICMPv4TypeEchoReply:
 					log.Printf("ICMP Echo Reply received from %v", ip4.SrcIP)
@@ -320,7 +341,7 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 	}
 }
 
-// ConnScan performs a full handshake on each TCP port.
+// ConnScan performs a full handshake on each TCP port, it supports ipv4 and ipv6.
 func (s *Scanner) ConnScan() (map[layers.TCPPort]string, error) {
 	openPorts := make(map[layers.TCPPort]string)
 	var mutex sync.Mutex
