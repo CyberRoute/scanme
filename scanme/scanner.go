@@ -458,12 +458,10 @@ func (s *Scanner) SendSynTCP4(ip string, p layers.TCPPort) {
 				}
 				if tcp.DstPort == layers.TCPPort(srctcpport) {
 					if tcp.SYN && tcp.ACK {
-						log.Printf("Port %d is OPEN\n", tcp.SrcPort)
-					} else if tcp.ACK {
-						//log.Printf("Port %d is OPEN\n", tcp.DstPort)
+						log.Printf("Port %v is OPEN\n", tcp.SrcPort)
 					} else {
 						// Port is closed
-						// log.Printf("Port %v closed", tcp.SrcPort)
+						log.Printf("Port %v CLOSED", tcp.SrcPort)
 					}
 					return
 				}
