@@ -218,7 +218,7 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 		dstMAC = mac
 	}
 
-	tcpport, err := getFreeTCPPort()
+	srctcpport, err := getFreeTCPPort()
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 		Protocol: layers.IPProtocolTCP,
 	}
 	tcp := layers.TCP{
-		SrcPort: tcpport,
+		SrcPort: srctcpport,
 		DstPort: 0, // will be incremented during the scan
 		SYN:     true,
 	}
@@ -320,7 +320,7 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 					continue
 				}
 			case layers.LayerTypeTCP:
-				if tcp.DstPort != tcpport {
+				if tcp.DstPort != srctcpport {
 					continue
 
 				} else if tcp.RST {
@@ -388,4 +388,108 @@ func (s *Scanner) ConnScan() (map[layers.TCPPort]string, error) {
 	wg.Wait()
 
 	return openPorts, nil
+}
+
+func (s *Scanner) SendSynTCP4(ip string, p layers.TCPPort) {
+
+	conn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer conn.Close()
+
+	srctcpport, err := getFreeTCPPort()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	ip4 := layers.IPv4{
+		SrcIP:    s.src,
+		DstIP:    s.dst,
+		Version:  4,
+		TTL:      64,
+		Protocol: layers.IPProtocolTCP,
+	}
+
+	tcpOption := layers.TCPOption{
+		OptionType:   layers.TCPOptionKindMSS,
+		OptionLength: 4,
+		OptionData:   []byte{0x05, 0xB4},
+	}
+
+	tcp := layers.TCP{
+		SrcPort: layers.TCPPort(srctcpport),
+		DstPort: p,
+		Window:  1024,
+		Options: []layers.TCPOption{tcpOption},
+		Seq:     1105024978,
+		SYN:     true,
+	}
+
+	err = tcp.SetNetworkLayerForChecksum(&ip4)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = s.sendsock(ip, conn, &tcp)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Set deadline so we don't wait forever.
+	if err := conn.SetDeadline(time.Now().Add(50 * time.Millisecond)); err != nil {
+		log.Fatal(err)
+	}
+	for {
+		b := make([]byte, 4096)
+		//log.Println("reading from conn")
+		n, addr, err := conn.ReadFrom(b)
+		if err != nil {
+			break
+		} else if addr.String() == net.ParseIP(ip).String() {
+			// Decode a packet
+			packet := gopacket.NewPacket(b[:n], layers.LayerTypeTCP, gopacket.Default)
+			// Get the TCP layer from this packet
+			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				tcp, ok := tcpLayer.(*layers.TCP)
+				if !ok {
+					continue
+				}
+				if tcp.DstPort == layers.TCPPort(srctcpport) {
+					if tcp.SYN && tcp.ACK {
+						log.Printf("Port %d is OPEN\n", tcp.SrcPort)
+					} else if tcp.ACK {
+						//log.Printf("Port %d is OPEN\n", tcp.DstPort)
+					} else {
+						// Port is closed
+						// log.Printf("Port %v closed", tcp.SrcPort)
+					}
+					return
+				}
+			}
+		}
+	}
+}
+
+func (s *Scanner) sendsock(destIP string, conn net.PacketConn, l ...gopacket.SerializableLayer) error {
+
+	if err := gopacket.SerializeLayers(s.buf, s.opts, l...); err != nil {
+		return err
+	}
+
+	var err error
+	retries := 10
+
+	for retries > 0 {
+		_, err = conn.WriteTo(s.buf.Bytes(), &net.IPAddr{IP: net.ParseIP(destIP)})
+		if err == nil {
+			break // Successfully sent, exit the loop
+		}
+
+		retries--
+		// introduce a small delay to allow the network interface to flush the queue
+		time.Sleep(10 * time.Millisecond)
+	}
+	return err
 }
