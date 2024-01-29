@@ -18,11 +18,6 @@ var (
 	targetIP = flag.String("ip", "::1", "IP address to bind the web UI server to.")
 )
 
-func isValidIPv6(address string) bool {
-	ip := net.ParseIP(address)
-	return ip != nil && strings.Contains(address, ":") && ip.To4() == nil
-}
-
 func main() {
 
 	flag.Parse()
