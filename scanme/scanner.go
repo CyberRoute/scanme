@@ -470,6 +470,84 @@ func (s *Scanner) SendSynTCP4(ip string, p layers.TCPPort) {
 	}
 }
 
+func (s *Scanner) SendSynTCP6(ip string, p layers.TCPPort) {
+
+	conn, err := net.ListenPacket("ip6:tcp", "::")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer conn.Close()
+
+	srctcpport, err := getFreeTCPPort()
+	if err != nil {
+		fmt.Println(err)
+	}
+	ip6 := layers.IPv6{
+		DstIP:      s.dst,
+		SrcIP:      s.src,
+		Version:    6,
+		HopLimit:   255,
+		NextHeader: layers.IPProtocolTCP,
+	}
+
+	tcpOption := layers.TCPOption{
+		OptionType:   layers.TCPOptionKindMSS,
+		OptionLength: 4,
+		OptionData:   []byte{0x05, 0xB4},
+	}
+
+	tcp := layers.TCP{
+		SrcPort: layers.TCPPort(srctcpport),
+		DstPort: p,
+		Window:  1024,
+		Options: []layers.TCPOption{tcpOption},
+		Seq:     1105024978,
+		SYN:     true,
+	}
+
+	err = tcp.SetNetworkLayerForChecksum(&ip6)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = s.sendsock(ip, conn, &tcp)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Set deadline so we don't wait forever.
+	if err := conn.SetDeadline(time.Now().Add(50 * time.Millisecond)); err != nil {
+		log.Fatal(err)
+	}
+	for {
+		b := make([]byte, 4096)
+		//log.Println("reading from conn")
+		n, addr, err := conn.ReadFrom(b)
+		if err != nil {
+			break
+		} else if addr.String() == net.ParseIP(ip).String() {
+			// Decode a packet
+			packet := gopacket.NewPacket(b[:n], layers.LayerTypeTCP, gopacket.Default)
+			// Get the TCP layer from this packet
+			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				tcp, ok := tcpLayer.(*layers.TCP)
+				if !ok {
+					continue
+				}
+				if tcp.DstPort == layers.TCPPort(srctcpport) {
+					if tcp.SYN && tcp.ACK {
+						log.Printf("Port %v is OPEN\n", tcp.SrcPort)
+					} else {
+						// Port is closed
+						log.Printf("Port %v CLOSED", tcp.SrcPort)
+					}
+					return
+				}
+			}
+		}
+	}
+}
+
 func (s *Scanner) sendsock(destIP string, conn net.PacketConn, l ...gopacket.SerializableLayer) error {
 
 	if err := gopacket.SerializeLayers(s.buf, s.opts, l...); err != nil {
