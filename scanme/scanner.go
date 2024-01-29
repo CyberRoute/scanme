@@ -26,6 +26,7 @@ type Scanner struct {
 	handle       *pcap.Handle
 	opts         gopacket.SerializeOptions
 	buf          gopacket.SerializeBuffer
+	tcpsequencer *TCPSequencer
 }
 
 // newScanner creates a new scanner for a given destination IP address, using
@@ -37,7 +38,8 @@ func NewScanner(ip net.IP, router routing.Router) (*Scanner, error) {
 			FixLengths:       true,
 			ComputeChecksums: true,
 		},
-		buf: gopacket.NewSerializeBuffer(),
+		buf:          gopacket.NewSerializeBuffer(),
+		tcpsequencer: NewTCPSequencer(),
 	}
 
 	iface, gw, src, err := router.Route(ip)
@@ -423,7 +425,7 @@ func (s *Scanner) SendSynTCP4(ip string, p layers.TCPPort) {
 		DstPort: p,
 		Window:  1024,
 		Options: []layers.TCPOption{tcpOption},
-		Seq:     1105024978,
+		Seq:     s.tcpsequencer.Next(),
 		SYN:     true,
 	}
 
@@ -502,7 +504,7 @@ func (s *Scanner) SendSynTCP6(ip string, p layers.TCPPort) {
 		DstPort: p,
 		Window:  1024,
 		Options: []layers.TCPOption{tcpOption},
-		Seq:     1105024978,
+		Seq:     s.tcpsequencer.Next(),
 		SYN:     true,
 	}
 
