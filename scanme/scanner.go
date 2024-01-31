@@ -253,7 +253,6 @@ func (s *Scanner) HandlePacket(data []byte, srcport layers.TCPPort, openPorts ma
 				continue
 			} else if tcp.SYN && tcp.ACK {
 				openPorts[(tcp.SrcPort)] = "open"
-				//log.Printf(" port %v open", tcp.SrcPort)
 				continue
 			}
 		case layers.LayerTypeICMPv4:
@@ -359,10 +358,6 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 			log.Printf("last port scanned for %v dst port %s", s.dst, tcp.DstPort)
 			return openPorts, nil
 		}
-		// if time.Since(start) > time.Second*20 {
-		// 	log.Printf("timed out for %v aborting scan", s.dst)
-		// 	return nil, nil
-		// }
 
 		// Read in the next packet.
 		data, _, err := s.handle.ReadPacketData()
