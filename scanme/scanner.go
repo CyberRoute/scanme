@@ -79,7 +79,20 @@ func (s *Scanner) send(l ...gopacket.SerializableLayer) error {
 	if err := gopacket.SerializeLayers(s.buf, s.opts, l...); err != nil {
 		return err
 	}
-	return s.handle.WritePacketData(s.buf.Bytes())
+	var err error
+	retries := 10
+
+	for retries > 0 {
+		err = s.handle.WritePacketData(s.buf.Bytes())
+		if err == nil {
+			break // Successfully sent, exit the loop
+		}
+
+		retries--
+		// introduce a small delay to allow the network interface to flush the queue
+		time.Sleep(10 * time.Millisecond)
+	}
+	return err
 }
 
 func (s *Scanner) sendARPRequest() (net.HardwareAddr, error) {
@@ -195,6 +208,65 @@ func (s *Scanner) sendICMPEchoRequest() error {
 	return nil
 }
 
+// HandlePacket processes a packet, extracting and analyzing its layers to determine
+// if it corresponds to a SYN-ACK response for a given TCP port. If a SYN-ACK is
+// detected, it updates the provided openPorts map to mark the corresponding port as "open".
+//
+// Parameters:
+//   - data: The raw packet data to be processed.
+//   - srcport: The source port to match in the TCP layer.
+//   - openPorts: A map storing open ports and their status.
+//
+// The function uses the gopacket library to decode the packet layers, filtering
+// based on Ethernet, IPv4, TCP, and ICMPv4 layers. If a SYN-ACK is detected on the
+// specified source port, it updates the openPorts map accordingly.
+func (s *Scanner) HandlePacket(data []byte, srcport layers.TCPPort, openPorts map[layers.TCPPort]string) {
+	var eth layers.Ethernet
+	var ip4 layers.IPv4
+	var tcp layers.TCP
+	var icmp layers.ICMPv4
+	var payload gopacket.Payload
+	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &tcp, &icmp, &payload)
+	parser.IgnoreUnsupported = true
+	decoded := []gopacket.LayerType{}
+
+	err := parser.DecodeLayers(data, &decoded)
+	if err != nil {
+		log.Printf("Decoding error:%v\n", err)
+	}
+	ipFlow := gopacket.NewFlow(layers.EndpointIPv4, s.dst, s.src)
+
+	for _, typ := range decoded {
+		switch typ {
+
+		case layers.LayerTypeEthernet:
+			continue
+		case layers.LayerTypeIPv4:
+			if ip4.NetworkFlow() != ipFlow {
+				continue
+			}
+		case layers.LayerTypeTCP:
+			if tcp.DstPort != srcport {
+				continue
+
+			} else if tcp.RST {
+				continue
+			} else if tcp.SYN && tcp.ACK {
+				openPorts[(tcp.SrcPort)] = "open"
+				//log.Printf(" port %v open", tcp.SrcPort)
+				continue
+			}
+		case layers.LayerTypeICMPv4:
+			switch icmp.TypeCode.Type() {
+			case layers.ICMPv4TypeEchoReply:
+				log.Printf("ICMP Echo Reply received from %v", ip4.SrcIP)
+			case layers.ICMPv4TypeDestinationUnreachable:
+				log.Printf(" port %v filtered", tcp.SrcPort)
+			}
+		}
+	}
+}
+
 // Synscan performs a SYN port scan on the specified destination IP address using the provided network interface.
 // It sends SYN packets to ports [1, 65535] and records open ports in a map. The function employs ARP requests,
 // ICMP Echo Requests, and packet capturing to identify open, closed, or filtered ports.
@@ -237,20 +309,22 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 		TTL:      64,
 		Protocol: layers.IPProtocolTCP,
 	}
+	tcpOption := layers.TCPOption{
+		OptionType:   layers.TCPOptionKindMSS,
+		OptionLength: 4,
+		OptionData:   []byte{0x05, 0xB4},
+	}
+
 	tcp := layers.TCP{
-		SrcPort: srctcpport,
-		DstPort: 0, // will be incremented during the scan
+		SrcPort: layers.TCPPort(srctcpport),
+		DstPort: 0,
+		Window:  1024,
+		Options: []layers.TCPOption{tcpOption},
+		Seq:     s.tcpsequencer.Next(),
 		SYN:     true,
 	}
 
 	err = tcp.SetNetworkLayerForChecksum(&ip4)
-	if err != nil {
-		return nil, err
-	}
-
-	ipFlow := gopacket.NewFlow(layers.EndpointIPv4, s.dst, s.src)
-
-	handle, err := pcap.OpenLive(s.iface.Name, 65535, true, pcap.BlockForever)
 	if err != nil {
 		return nil, err
 	}
@@ -260,19 +334,17 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 	// this rule should decrease the number of packets captured, still experimenting with this :D
 	bpfFilter := "icmp or (tcp and (tcp[13] & 0x02 != 0 or tcp[13] & 0x10 != 0 or tcp[13] & 0x04 != 0))"
 
-	err = handle.SetBPFFilter(bpfFilter)
+	err = s.handle.SetBPFFilter(bpfFilter)
 	if err != nil {
 		return nil, err
 	}
 
-	defer handle.Close()
+	defer s.handle.Close()
 
 	err = s.sendICMPEchoRequest()
 	if err != nil {
 		return nil, err
 	}
-
-	//start := time.Now()
 
 	for {
 		// Send one packet per loop iteration until we've sent packets
@@ -292,54 +364,17 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 		// 	return nil, nil
 		// }
 
-		eth := layers.Ethernet{}
-		ip4 := layers.IPv4{}
-		tcp := layers.TCP{}
-		icmp := layers.ICMPv4{}
-
-		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &tcp, &icmp)
-		decodedLayers := make([]gopacket.LayerType, 0, 4)
-
 		// Read in the next packet.
-		data, _, err := handle.ReadPacketData()
+		data, _, err := s.handle.ReadPacketData()
 		if err == pcap.NextErrorTimeoutExpired {
 			continue
 		} else if err != nil {
 			log.Printf("error reading packet: %v", err)
 			continue
 		}
-		// Parse the packet. Using DecodingLayerParser to be really fast
-		if err := parser.DecodeLayers(data, &decodedLayers); err != nil {
-			continue
-		}
-		for _, typ := range decodedLayers {
-			switch typ {
 
-			case layers.LayerTypeEthernet:
-				continue
-			case layers.LayerTypeIPv4:
-				if ip4.NetworkFlow() != ipFlow {
-					continue
-				}
-			case layers.LayerTypeTCP:
-				if tcp.DstPort != srctcpport {
-					continue
-
-				} else if tcp.RST {
-					continue
-				} else if tcp.SYN && tcp.ACK {
-					openPorts[(tcp.SrcPort)] = "open"
-					continue
-				}
-			case layers.LayerTypeICMPv4:
-				switch icmp.TypeCode.Type() {
-				case layers.ICMPv4TypeEchoReply:
-					log.Printf("ICMP Echo Reply received from %v", ip4.SrcIP)
-				case layers.ICMPv4TypeDestinationUnreachable:
-					log.Printf(" port %v filtered", tcp.SrcPort)
-				}
-			}
-		}
+		// Handle the packet and update openPorts map
+		s.HandlePacket(data, srctcpport, openPorts)
 	}
 }
 
