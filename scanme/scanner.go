@@ -327,18 +327,22 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	handle, err := pcap.OpenLive(s.iface.Name, 65535, true, pcap.BlockForever)
+	if err != nil {
+		return nil, err
+	}
 	// tcp[13] & 0x02 != 0 checks for SYN flag.
 	// tcp[13] & 0x10 != 0 checks for ACK flag.
 	// tcp[13] & 0x04 != 0 checks for RST flag.
 	// this rule should decrease the number of packets captured, still experimenting with this :D
 	bpfFilter := "icmp or (tcp and (tcp[13] & 0x02 != 0 or tcp[13] & 0x10 != 0 or tcp[13] & 0x04 != 0))"
 
-	err = s.handle.SetBPFFilter(bpfFilter)
+	err = handle.SetBPFFilter(bpfFilter)
 	if err != nil {
 		return nil, err
 	}
 
-	defer s.handle.Close()
+	defer handle.Close()
 
 	err = s.sendICMPEchoRequest()
 	if err != nil {
@@ -360,7 +364,7 @@ func (s *Scanner) Synscan() (map[layers.TCPPort]string, error) {
 		}
 
 		// Read in the next packet.
-		data, _, err := s.handle.ReadPacketData()
+		data, _, err := handle.ReadPacketData()
 		if err == pcap.NextErrorTimeoutExpired {
 			continue
 		} else if err != nil {
