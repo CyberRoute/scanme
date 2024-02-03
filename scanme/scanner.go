@@ -27,6 +27,7 @@ type Scanner struct {
 	opts         gopacket.SerializeOptions
 	buf          gopacket.SerializeBuffer
 	tcpsequencer *TCPSequencer
+	mu           sync.Mutex
 }
 
 // newScanner creates a new scanner for a given destination IP address, using
@@ -426,12 +427,34 @@ func (s *Scanner) ConnScan() (map[layers.TCPPort]string, error) {
 	return openPorts, nil
 }
 
+func (s *Scanner) HandlePacketSock(data []byte, srcport layers.TCPPort) {
+	var ip4 layers.IPv4
+	var tcp layers.TCP
+	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeTCP, &ip4, &tcp)
+	parser.IgnoreUnsupported = true
+	decoded := []gopacket.LayerType{}
+
+	err := parser.DecodeLayers(data, &decoded)
+	if err != nil {
+		log.Printf("Decoding error:%v\n", err)
+	}
+	for _, typ := range decoded {
+		switch typ {
+		case layers.LayerTypeTCP:
+			if tcp.DstPort == layers.TCPPort(srcport) {
+				if tcp.SYN && tcp.ACK {
+					log.Printf("Port %v is OPEN\n", tcp.SrcPort)
+				}
+			}
+		}
+	}
+}
+
 func (s *Scanner) SendSynTCP4(ip string, p layers.TCPPort) {
 
 	conn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 	defer conn.Close()
 
@@ -466,42 +489,26 @@ func (s *Scanner) SendSynTCP4(ip string, p layers.TCPPort) {
 	err = tcp.SetNetworkLayerForChecksum(&ip4)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 
 	err = s.sendsock(ip, conn, &tcp)
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	// Set deadline so we don't wait forever.
-	if err := conn.SetDeadline(time.Now().Add(50 * time.Millisecond)); err != nil {
-		log.Fatal(err)
+	if err := conn.SetDeadline(time.Now().Add(40 * time.Millisecond)); err != nil {
+		fmt.Println(err)
 	}
+
 	for {
 		b := make([]byte, 4096)
-		//log.Println("reading from conn")
 		n, addr, err := conn.ReadFrom(b)
 		if err != nil {
 			break
 		} else if addr.String() == net.ParseIP(ip).String() {
 			// Decode a packet
-			packet := gopacket.NewPacket(b[:n], layers.LayerTypeTCP, gopacket.Default)
-			// Get the TCP layer from this packet
-			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
-				tcp, ok := tcpLayer.(*layers.TCP)
-				if !ok {
-					continue
-				}
-				if tcp.DstPort == layers.TCPPort(srctcpport) {
-					if tcp.SYN && tcp.ACK {
-						log.Printf("Port %v is OPEN\n", tcp.SrcPort)
-					} else {
-						// Port is closed
-						log.Printf("Port %v CLOSED", tcp.SrcPort)
-					}
-					return
-				}
-			}
+			s.HandlePacketSock(b[:n], srctcpport)
 		}
 	}
 }
@@ -557,7 +564,6 @@ func (s *Scanner) SendSynTCP6(ip string, p layers.TCPPort) {
 	}
 	for {
 		b := make([]byte, 4096)
-		//log.Println("reading from conn")
 		n, addr, err := conn.ReadFrom(b)
 		if err != nil {
 			break
@@ -585,16 +591,16 @@ func (s *Scanner) SendSynTCP6(ip string, p layers.TCPPort) {
 }
 
 func (s *Scanner) sendsock(destIP string, conn net.PacketConn, l ...gopacket.SerializableLayer) error {
+	buf := gopacket.NewSerializeBuffer()
 
-	if err := gopacket.SerializeLayers(s.buf, s.opts, l...); err != nil {
+	if err := gopacket.SerializeLayers(buf, s.opts, l...); err != nil {
 		return err
 	}
 
-	var err error
 	retries := 10
 
 	for retries > 0 {
-		_, err = conn.WriteTo(s.buf.Bytes(), &net.IPAddr{IP: net.ParseIP(destIP)})
+		_, err := conn.WriteTo(buf.Bytes(), &net.IPAddr{IP: net.ParseIP(destIP)})
 		if err == nil {
 			break // Successfully sent, exit the loop
 		}
@@ -603,5 +609,6 @@ func (s *Scanner) sendsock(destIP string, conn net.PacketConn, l ...gopacket.Ser
 		// introduce a small delay to allow the network interface to flush the queue
 		time.Sleep(10 * time.Millisecond)
 	}
-	return err
+
+	return nil
 }

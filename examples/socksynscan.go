@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/CyberRoute/scanme/scanme"
@@ -18,10 +19,9 @@ var (
 )
 
 func main() {
-
 	flag.Parse()
 	if *targetIP == "" {
-		fmt.Println("No ip specified.")
+		fmt.Println("No IP specified.")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -46,9 +46,32 @@ func main() {
 		log.Fatalf("Unable to create scanner for %v: %v", ip, err)
 	}
 
-	for port := 1; port <= 65535; port++ {
-		scanner.SendSynTCP4(targetIP, layers.TCPPort(port))
+	var wg sync.WaitGroup
+	ports := make(chan layers.TCPPort, 100) // Buffered channel to limit concurrency
+
+	// Worker function to scan ports
+	portScanner := func() {
+		defer wg.Done()
+		for port := range ports {
+			scanner.SendSynTCP4(targetIP, port)
+			//scanner.SendSynTCP4(targetIP, port)
+		}
 	}
+
+	// Start worker goroutines
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go portScanner()
+	}
+
+	// Enqueue ports to be scanned
+	for port := 1; port <= 65535; port++ {
+		ports <- layers.TCPPort(port)
+	}
+
+	close(ports) // Close the channel to signal goroutines to exit
+
+	wg.Wait()
 
 	defer scanner.Close()
 
