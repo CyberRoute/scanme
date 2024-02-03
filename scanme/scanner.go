@@ -27,7 +27,6 @@ type Scanner struct {
 	opts         gopacket.SerializeOptions
 	buf          gopacket.SerializeBuffer
 	tcpsequencer *TCPSequencer
-	mu           sync.Mutex
 }
 
 // newScanner creates a new scanner for a given destination IP address, using
