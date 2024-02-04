@@ -54,12 +54,11 @@ func main() {
 		defer wg.Done()
 		for port := range ports {
 			scanner.SendSynTCP4(targetIP, port)
-			//scanner.SendSynTCP4(targetIP, port)
 		}
 	}
 
 	// Start worker goroutines
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go portScanner()
 	}

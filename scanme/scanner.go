@@ -490,13 +490,13 @@ func (s *Scanner) SendSynTCP4(ip string, p layers.TCPPort) {
 		fmt.Println(err)
 	}
 
-	err = s.sendsock(ip, conn, &tcp)
-	if err != nil {
+	// Set deadline so we don't wait forever.
+	if err := conn.SetDeadline(time.Now().Add(50 * time.Millisecond)); err != nil {
 		fmt.Println(err)
 	}
 
-	// Set deadline so we don't wait forever.
-	if err := conn.SetDeadline(time.Now().Add(40 * time.Millisecond)); err != nil {
+	err = s.sendsock(ip, conn, &tcp)
+	if err != nil {
 		fmt.Println(err)
 	}
 
