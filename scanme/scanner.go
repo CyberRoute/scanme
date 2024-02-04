@@ -568,23 +568,7 @@ func (s *Scanner) SendSynTCP6(ip string, p layers.TCPPort) {
 			break
 		} else if addr.String() == net.ParseIP(ip).String() {
 			// Decode a packet
-			packet := gopacket.NewPacket(b[:n], layers.LayerTypeTCP, gopacket.Default)
-			// Get the TCP layer from this packet
-			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
-				tcp, ok := tcpLayer.(*layers.TCP)
-				if !ok {
-					continue
-				}
-				if tcp.DstPort == layers.TCPPort(srctcpport) {
-					if tcp.SYN && tcp.ACK {
-						log.Printf("Port %v is OPEN\n", tcp.SrcPort)
-					} else {
-						// Port is closed
-						log.Printf("Port %v CLOSED", tcp.SrcPort)
-					}
-					return
-				}
-			}
+			s.HandlePacketSock(b[:n], srctcpport)
 		}
 	}
 }
