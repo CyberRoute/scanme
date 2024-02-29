@@ -52,7 +52,23 @@ func main() {
 	}
 	// Process open ports
 	for port, service := range openPorts {
-		log.Printf("Port %v %v", port, service)
+		var banner string
+		var err error
+		switch service {
+		case "mysql":
+			banner, _ = scanme.GrabMysqlBanner(targetIP, int(port))
+		default:
+			banner = scanme.GrabBanner(targetIP, int(port))
+		}
+		if err != nil {
+			log.Printf("Error grabbing banner for port %d (%s): %v", port, service, err)
+			continue
+		}
+		if banner != "" {
+			log.Printf("Port %d %s Version: %s", port, service, banner)
+		} else {
+			log.Printf("Port %d %s", port, service)
+		}
 	}
 
 	defer scanner.Close()
