@@ -13,8 +13,8 @@ This is not an attempt to rewrite **nmap**, probably the most popular scan, but 
 is not yet implemented but will be coming soon. Despite scanning the 65k tcp ports serially it is pretty fast if compared with:
 
 ```bash
-nmap -vvv -sS -p 1-65535 <ip-tagert>
-nmap -vvv -sT  -p 1-65535 <ip-tagert>
+nmap -vvv -sS -p 1-65535 {target_IP}
+nmap -vvv -sT -p 1-65535 {target_IP}
 ```
 
 ## Features
