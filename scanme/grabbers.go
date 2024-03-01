@@ -39,6 +39,7 @@ func GrabBanner(ipAddress string, port int) string {
 	case 21: // FTP
 	case 22: // SSH
 	case 25: // SMTP
+	case 110: // POP
 	case 6667: // IRC
 	default:
 		return ""
