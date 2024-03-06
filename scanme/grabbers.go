@@ -9,6 +9,31 @@ import (
 	"time"
 )
 
+func GetHeader(ipAddress string, port int) (string, error) {
+	req, err := net.DialTimeout("tcp", ipAddress+":"+strconv.Itoa(port), 1*time.Second)
+	if err != nil {
+		return "", err
+	}
+	defer req.Close()
+
+	_, err = req.Write([]byte("HEAD / HTTP/1.0\r\n\r\n"))
+	if err != nil {
+		return "", err
+	}
+
+	reader := bufio.NewReader(req)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return "", err
+		}
+
+		if strings.HasPrefix(line, "Server:") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "Server:")), nil
+		}
+	}
+}
+
 func GrabMysqlBanner(ipAddress string, port int) (string, error) {
 	req, err := net.DialTimeout("tcp", ipAddress+":"+strconv.Itoa(port), 1*time.Second)
 	if err != nil {
@@ -45,6 +70,12 @@ func GrabBanner(ipAddress string, port int) string {
 			return ""
 		}
 		return mysqlBanner
+	case 80: // HTTP
+		serverHeader, err := GetHeader(ipAddress, port)
+		if err != nil {
+			return ""
+		}
+		return serverHeader
 	case 6667: // IRC
 	default:
 		return ""
