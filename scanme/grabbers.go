@@ -63,8 +63,9 @@ func GrabBanner(ipAddress string, port int) string {
 	case 22: // SSH
 	case 25: // SMTP
 	case 110: // POP
+	case 119: // NNTP
+	case 143: // IMAP
 	case 3306: // MYSQL
-		// Call GrabMysqlBanner function for port 3306
 		mysqlBanner, err := GrabMysqlBanner(ipAddress, port)
 		if err != nil {
 			return ""

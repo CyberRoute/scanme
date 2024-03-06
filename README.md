@@ -22,7 +22,7 @@ nmap -vvv -sT -p 1-65535 {target_IP}
 - **SYN Scan:** Perform SYN scans to identify open ports on a target host (supports IPv4 and IPv6).
 - **Connect Scan:** Perform a full TCP handshake on a target host (supports IPv4 and IPv6).
 - **ICMP Echo Request:** Send ICMP Echo Requests to discover live hosts on the network.
-- **Banners Grabbing:** An experimental feature so far on FTP, SSH, IRC, MYSQL, HTTP, POP.
+- **Banners Grabbing:** An experimental feature so far on FTP, SSH, IRC, MYSQL, HTTP, NNTP, IMAP, POP.
 
 ```
 2024/03/06 16:42:16 Port 22(ssh) open Version: SSH-2.0-OpenSSH_7.4
