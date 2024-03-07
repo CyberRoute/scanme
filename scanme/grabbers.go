@@ -2,6 +2,9 @@ package scanme
 
 import (
 	"bufio"
+	"crypto/tls"
+	"fmt"
+	"github.com/go-ldap/ldap/v3"
 	"net"
 	"regexp"
 	"strconv"
@@ -57,6 +60,44 @@ func GrabMysqlBanner(ipAddress string, port int) (string, error) {
 	return "", nil
 }
 
+func GetLDAPBanner(ipAddress string, port int) (string, error) {
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	l, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ipAddress, port), tlsConfig)
+
+	if err != nil {
+		return "", err
+	}
+	defer l.Close()
+
+	// Bind to the LDAP server with an empty password
+	err = l.UnauthenticatedBind("")
+	if err != nil {
+		return "", err
+	}
+
+	// Search for server information in the root DSE
+	searchRequest := ldap.NewSearchRequest(
+		"",                   // base dn (root DSE)
+		ldap.ScopeBaseObject, // search scope (base object)
+		ldap.NeverDerefAliases, 0, 0, false, "(objectClass=*)", []string{"supportedLDAPVersion", "defaultNamingContext", "*"}, nil,
+	)
+
+	searchResult, err := l.Search(searchRequest)
+	if err != nil {
+		return "", err
+	}
+
+	// Format server information
+	var serverInfo string
+	for _, entry := range searchResult.Entries {
+		for _, attr := range entry.Attributes {
+			serverInfo += fmt.Sprintf("%s: %s", attr.Name, attr.Values)
+		}
+	}
+
+	return serverInfo, nil
+}
+
 func GrabBanner(ipAddress string, port int) string {
 	switch port {
 	case 21: // FTP
@@ -65,6 +106,12 @@ func GrabBanner(ipAddress string, port int) string {
 	case 110: // POP
 	case 119: // NNTP
 	case 143: // IMAP
+	case 636: // LDAPS
+		serverInfo, err := GetLDAPBanner(ipAddress, port)
+		if err != nil {
+			return ""
+		}
+		return serverInfo
 	case 3306: // MYSQL
 		mysqlBanner, err := GrabMysqlBanner(ipAddress, port)
 		if err != nil {

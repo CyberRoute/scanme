@@ -22,11 +22,17 @@ nmap -vvv -sT -p 1-65535 {target_IP}
 - **SYN Scan:** Perform SYN scans to identify open ports on a target host (supports IPv4 and IPv6).
 - **Connect Scan:** Perform a full TCP handshake on a target host (supports IPv4 and IPv6).
 - **ICMP Echo Request:** Send ICMP Echo Requests to discover live hosts on the network.
-- **Banners Grabbing:** An experimental feature so far on FTP, SSH, IRC, MYSQL, HTTP, NNTP, IMAP, POP.
+- **Banners Grabbing:** An experimental feature so far on FTP, SSH, IRC, MYSQL, LDAP, HTTP, NNTP, IMAP, POP.
 
 ```
+2024/03/07 14:20:34 Port 21(ftp) open Version: 220---------- Welcome to Pure-FTPd [privsep] [TLS] ----------
 2024/03/06 16:42:16 Port 22(ssh) open Version: SSH-2.0-OpenSSH_7.4
+2024/03/07 14:20:34 Port 25(smtp) open Version: 220-tomasi.dnshigh.com ESMTP Exim 4.96.2 #2 Thu, 07 Mar 2024 14:20:34 +0100
+2024/03/07 14:20:34 Port 80(http) open Version: Apache
+2024/03/07 14:20:34 Port 110(pop3) open Version: +OK Dovecot ready.
+2024/03/07 14:20:34 Port 143(imap) open Version: * OK [CAPABILITY IMAP4rev1 SASL-IR LOGIN-REFERRALS ID ENABLE IDLE NAMESPACE LITERAL+ STARTTLS AUTH=PLAIN AUTH=LOGIN] Dovecot ready.
 2024/03/06 16:43:36 Port 3306(mysql) open Version: 8.0.36
+2024/03/07 14:15:59 Port 636(ldaps) open Version: objectClass: [top vmwDseRoot]cn: [DSE Root]supportedLDAPVersion: [3]vmwPlatformServicesControllerVersion: [6.5.0]msDS-SiteName: [Default-First-Site]subSchemaSubEntry: [cn=aggregate,cn=schemacontext]defaultNamingContext: [dc=vsphere,dc=local]
 ```
 
 ## Example Simple scanner
