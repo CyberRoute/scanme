@@ -22,7 +22,7 @@ nmap -vvv -sT -p 1-65535 {target_IP}
 - **SYN Scan:** Perform SYN scans to identify open ports on a target host (supports IPv4 and IPv6).
 - **Connect Scan:** Perform a full TCP handshake on a target host (supports IPv4 and IPv6).
 - **ICMP Echo Request:** Send ICMP Echo Requests to discover live hosts on the network.
-- **Banners Grabbing:** An experimental feature so far on FTP, SSH, IRC, MYSQL, LDAP, HTTP, NNTP, IMAP, POP.
+- **Banners Grabbing:** An experimental feature so far on FTP, SSH, IRC, MYSQL, LDAPS, HTTP, NNTP, IMAP, POP.
 
 ```
 2024/03/07 14:20:34 Port 21(ftp) open Version: 220---------- Welcome to Pure-FTPd [privsep] [TLS] ----------
