@@ -428,8 +428,9 @@ func (s *Scanner) ConnScan() (map[layers.TCPPort]string, error) {
 
 func (s *Scanner) HandlePacketSock(data []byte, srcport layers.TCPPort) {
 	var ip4 layers.IPv4
+	var ip6 layers.IPv6
 	var tcp layers.TCP
-	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeTCP, &ip4, &tcp)
+	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeTCP, &ip4, &ip6, &tcp)
 	parser.IgnoreUnsupported = true
 	decoded := []gopacket.LayerType{}
 
@@ -442,7 +443,7 @@ func (s *Scanner) HandlePacketSock(data []byte, srcport layers.TCPPort) {
 		case layers.LayerTypeTCP:
 			if tcp.DstPort == layers.TCPPort(srcport) {
 				if tcp.SYN && tcp.ACK {
-					log.Printf("Port %v is OPEN\n", tcp.SrcPort)
+					log.Printf("Port %v open\n", tcp.SrcPort)
 				}
 			}
 		}
