@@ -13,18 +13,30 @@ import (
 )
 
 func GetHeader(ipAddress string, port int) (string, error) {
-	req, err := net.DialTimeout("tcp", ipAddress+":"+strconv.Itoa(port), 1*time.Second)
+	conn, err := net.DialTimeout("tcp", ipAddress+":"+strconv.Itoa(port), 1*time.Second)
 	if err != nil {
 		return "", err
 	}
-	defer req.Close()
+	defer conn.Close()
 
-	_, err = req.Write([]byte("HEAD / HTTP/1.0\r\n\r\n"))
+	// Establishing TLS connection for HTTPS (port 443)
+	if port == 443 {
+		tlsConn := tls.Client(conn, &tls.Config{
+			InsecureSkipVerify: true, // InsecureSkipVerify is used here for simplicity
+		})
+		if err := tlsConn.Handshake(); err != nil {
+			return "", err
+		}
+		conn = tlsConn
+	}
+
+	// Sending HTTP request
+	_, err = conn.Write([]byte("HEAD / HTTP/1.0\r\n\r\n"))
 	if err != nil {
 		return "", err
 	}
 
-	reader := bufio.NewReader(req)
+	reader := bufio.NewReader(conn)
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -119,6 +131,12 @@ func GrabBanner(ipAddress string, port int) string {
 		}
 		return mysqlBanner
 	case 80: // HTTP
+		serverHeader, err := GetHeader(ipAddress, port)
+		if err != nil {
+			return ""
+		}
+		return serverHeader
+	case 443: // HTTPS
 		serverHeader, err := GetHeader(ipAddress, port)
 		if err != nil {
 			return ""
