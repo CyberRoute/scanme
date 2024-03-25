@@ -116,7 +116,7 @@ func GetDNSBanner(ipAddress string, port int) (string, error) {
 	c := new(dns.Client)
 	m := new(dns.Msg)
 	m.Question = make([]dns.Question, 1)
-	m.Question[0] = dns.Question{"version.bind.", dns.TypeTXT, dns.ClassCHAOS}
+	m.Question[0] = dns.Question{Name: "version.bind.", Qtype: dns.TypeTXT, Qclass: dns.ClassCHAOS}
 
 	addr := fmt.Sprintf("%s:%d", ipAddress, port)
 	in, _, err := c.Exchange(m, addr)
