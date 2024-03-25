@@ -60,7 +60,7 @@ func main() {
 			continue
 		}
 		if banner != "" {
-			log.Printf("Port %v %v Version: %s", port, service, banner)
+			log.Printf("Port %v %v Banner: %s", port, service, banner)
 		} else {
 			log.Printf("Port %v %v", port, service)
 		}

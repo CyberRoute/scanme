@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
-	"github.com/go-ldap/ldap/v3"
 	"net"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-ldap/ldap/v3"
+	"github.com/miekg/dns"
 )
 
 func GetHeader(ipAddress string, port int) (string, error) {
@@ -110,6 +112,30 @@ func GetLDAPBanner(ipAddress string, port int) (string, error) {
 	return serverInfo, nil
 }
 
+func GetDNSBanner(ipAddress string, port int) (string, error) {
+	c := new(dns.Client)
+	m := new(dns.Msg)
+	m.Question = make([]dns.Question, 1)
+	m.Question[0] = dns.Question{"version.bind.", dns.TypeTXT, dns.ClassCHAOS}
+
+	addr := fmt.Sprintf("%s:%d", ipAddress, port)
+	in, _, err := c.Exchange(m, addr)
+	if err != nil {
+		return "", err
+	}
+
+	if in != nil && len(in.Answer) > 0 {
+		s := in.Answer[0].String()
+		re := regexp.MustCompile(".*\"([^\"]+)\".*")
+		match := re.FindStringSubmatch(s)
+		if len(match) > 0 {
+			return match[1], nil
+		}
+	}
+
+	return "", nil
+}
+
 func GrabBanner(ipAddress string, port int) string {
 	switch port {
 	case 21: // FTP
@@ -143,6 +169,12 @@ func GrabBanner(ipAddress string, port int) string {
 		}
 		return serverHeader
 	case 6667: // IRC
+	case 53: // DNS
+		dnsBanner, err := GetDNSBanner(ipAddress, port)
+		if err != nil {
+			return ""
+		}
+		return dnsBanner
 	default:
 		return ""
 	}
