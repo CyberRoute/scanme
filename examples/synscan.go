@@ -1,3 +1,5 @@
+
+//nolint:unparam
 package main
 
 import (

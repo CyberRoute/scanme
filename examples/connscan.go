@@ -1,3 +1,5 @@
+
+//nolint:unparam
 package main
 
 import (
@@ -12,7 +14,7 @@ import (
 	"github.com/google/gopacket/routing"
 )
 
-func main() {
+func main() { 
 	var targetIP string
 	flag.StringVar(&targetIP, "ip", "", "Target IP address to scan")
 	flag.Parse()
