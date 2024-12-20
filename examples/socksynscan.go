@@ -1,5 +1,5 @@
 
-//nolint:unparam
+//go:build ignore
 package main
 
 import (
