@@ -76,7 +76,6 @@ func GrabMysqlBanner(ipAddress string, port int) (string, error) {
 
 func GetLDAPBanner(ipAddress string, port int) (string, error) {
 	ldapURL := fmt.Sprintf("ldaps://%s:%d", ipAddress, port)
-
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
 
 	l, err := ldap.DialURL(ldapURL, ldap.DialWithTLSConfig(tlsConfig))
@@ -107,7 +106,7 @@ func GetLDAPBanner(ipAddress string, port int) (string, error) {
 	var serverInfo string
 	for _, entry := range searchResult.Entries {
 		for _, attr := range entry.Attributes {
-			serverInfo += fmt.Sprintf("%s: %s\n", attr.Name, attr.Values)
+			serverInfo += fmt.Sprintf("%s: %s", attr.Name, attr.Values)
 		}
 	}
 
