@@ -45,7 +45,9 @@ nmap -vvv -sT -p 1-65535 {target_IP}
 ## Installation
 
 - On Linux, install `libpcap` 
-
+```bash
+sudo apt install -y libpcap-dev
+```
 ```bash
 go get -u github.com/CyberRoute/scanme
 ```
