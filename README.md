@@ -39,12 +39,12 @@ nmap -vvv -sT -p 1-65535 {target_IP}
 
 ## Example Simple scanner
 <div align="center">
-    <img src="/img/scanme.png" width="800px"</img> 
+    <img src="/assets/scanme.png" width="800px"</img>
 </div>
 
 ## Installation
 
-- On Linux, install `libpcap` 
+- On Linux, install `libpcap`
 ```bash
 sudo apt install -y libpcap-dev
 ```
@@ -122,7 +122,7 @@ func main() {
 ## Sample scan
 ```
 alessandro@xps:~/Development/scanme$ sudo go run main.go -ip 172.16.168.131
-[sudo] password for alessandro: 
+[sudo] password for alessandro:
 2024/01/11 15:04:53 scanning ip 172.16.168.131 with interface vmnet8, gateway <nil>, src 172.16.168.1
 2024/01/11 15:04:53 ICMP Echo Reply received from 172.16.168.131
 2024/01/11 15:04:54 last port scanned for 172.16.168.131 dst port 65535 assuming we've seen all we can
@@ -147,5 +147,3 @@ Scanme is developed by Alessandro Bresciani with some help from various projects
 ## Acknowledgments
 Inspired by and wanting to improve this https://github.com/google/gopacket/blob/master/examples/synscan/main.go
 Technical details checked here https://nmap.org/book/synscan.html and obviously https://github.com/nmap/nmap
-
-
