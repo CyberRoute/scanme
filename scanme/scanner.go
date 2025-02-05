@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/CyberRoute/scanme/utils"
+	"github.com/CyberRoute/scanme/internal/service"
+	"github.com/CyberRoute/scanme/internal/tcp"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -169,7 +170,7 @@ func (s *Scanner) sendARPRequest() (net.HardwareAddr, error) {
 
 func getFreeTCPPort() (layers.TCPPort, error) {
 	// Use the library or function that returns a free TCP port as an int.
-	tcpport, err := utils.GetFreeTCPPort()
+	tcpport, err := tcp.GetFreeTCPPort()
 	if err != nil {
 		return 0, err
 	}
@@ -396,7 +397,7 @@ func (s *Scanner) ConnScan() (map[layers.TCPPort]string, error) {
 				conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
 				if err == nil {
 					conn.Close()
-					serviceName, err := utils.GetServiceName(strconv.Itoa(p), "tcp")
+					serviceName, err := service.GetServiceName(strconv.Itoa(p), "tcp")
 					if err != nil {
 						// Log or handle the error, and continue the loop
 						log.Printf("Error getting service name for port %d: %v", p, err)
